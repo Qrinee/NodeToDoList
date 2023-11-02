@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ToDoList</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="modal-holder" class="modal-holder">
+        <div id="modal" class="modal">
+            <h3 id="text" class="text">Edit task</h3>
+            <form>
+                <input type="text" placeholder="Task name..." id="rename-task-input" />
+                <input type="button" value="Rename" id="rename-task-button" style="margin-top: 20px;" />
+                <input type="button" value="Close" id="close-modal-button" style="margin-top: 20px;">
+            </form>
+        </div>
+    </div>
+    <div id="listBox">
+        <p id="listTopText">ToDo:</p>
+        <form>
+            <label for="select-category-input">Select category:</label>
+            <select name="select-category-input" id="select-category-input">
+            <script>
+                fetch('http://localhost:5000/categories').then(e => e.json()).then(e => {
+                    e.map(e => {
+                        const createOption = document.createElement('option')
+                        createOption.innerText = e.categoryname
+                        createOption.value = e.id_categories
+                        selectCategory.append(createOption)
+                    })
+                })
+            </script>
+            </select>
+            <input type="text" placeholder="Task name" id="task-name-input">
+            <input type="submit" value="Add task" id="add-task-button">
+        </form>
+            <br>
+        <form>
+            <label for="add-new-category-input">Add new category:</label>
+            <input type="text" placeholder="Category name" name="add-new-category-input" id="add-new-category-input">
+            <input type="submit" name="add-new-category" id="add-new-category-button" value="Add category">
+        </form>
+            <br>
+        <form>
+            <label for="remove-category-input">Remove existing category</label>
+            <select name="remove-category-input" id="remove-category-input">
+                <script>
+                    fetch('http://localhost:5000/categories').then(e => e.json()).then(e => {
+                        e.map(e => {
+                            const createOption = document.createElement('option')
+                            createOption.innerText = e.categoryname
+                            createOption.value = e.id_categories
+                            removeCategorySelect.append(createOption)
+                        })
+                    })
+                </script>
+            </select>
+            <input type="submit" value="Remove category" id="remove-category-button">
+        </form>
+            <br>
+        <div>
+            <form id="task-container">
+                <script>
+                    const currentUser = 1;
+
+                    const renameTaskButton = document.getElementById('rename-task-button')
+                    const closeButton = document.getElementById('close-modal-button')
+                    const renameTaskInput = document.getElementById('rename-task-input')
+                    
+                    function openModal(){
+                        const modalHolder = document.getElementById('modal-holder')
+                        const modal = document.getElementById('modal')
+
+                        const text = document.getElementById('text')
+
+                        modalHolder.style.display = "flex"
+                        modal.style.display = "flex"
+
+                        text.style.display = "block"
+                        renameTaskInput.style.display = "block"
+                        renameTaskButton.style.display = "block"
+                        closeButton.style.display = "block"
+                    }
+
+                    function closeModal(){
+                        const modalHolder = document.getElementById('modal-holder')
+                        const modal = document.getElementById('modal')
+
+                        const text = document.getElementById('text')
+
+                        modalHolder.style.display = "none"
+                        modal.style.display = "none"
+
+                        text.style.display = "none"
+                        renameTaskInput.style.display = "none"
+                        renameTaskButton.style.display = "none"
+                        closeButton.style.display = "none"
+                    }
+
+                    closeButton.addEventListener('click', closeModal)
+
+                    fetch(`http://localhost:5000/user/${currentUser}`).then(e => e.json()).then(e => {
+                        e.map(e => {
+                            const createTaskElement = document.createElement('div')
+                            const createCheckbox = document.createElement('input')
+                            const createEditButton = document.createElement('input')
+                            const createDeleteButton = document.createElement('input')
+                            const checkbox = document.querySelector('input[type=checkbox]')
+
+                            createCheckbox.setAttribute('data', e.id_tasks)
+                            
+                            createCheckbox.addEventListener('change', (e) => {
+                                console.log(e.target.getAttribute('data'))
+                                fetch(`http://localhost:5000/change-checkbox-value`, {
+                                    method: 'PUT',
+                                    headers: {
+                                        "Content-Type": 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        id: e.target.getAttribute('data'),
+                                        iscompleted: e.target.checked ? 1 : 0
+                                    })
+                                })
+                            })
+
+                            createCheckbox.setAttribute('type', 'checkbox')
+                            createCheckbox.checked = e.iscompleted
+                            createCheckbox.setAttribute('id', 'checkbox-' + e.id_tasks)
+                            
+                            createEditButton.setAttribute('type', 'button')
+                            createEditButton.setAttribute('id', 'edit-button-' + e.id_tasks)
+                            createEditButton.classList.add('edit-buttons')
+                            createEditButton.setAttribute('value', 'Edit name')
+                            createEditButton.setAttribute('data', e.id_tasks)
+
+                            createEditButton.addEventListener('click', (e) => {
+                                const taskId = e.target.getAttribute('data')
+
+                                renameTaskButton.setAttribute('data-task-id', taskId)
+
+                                openModal()
+                            });
+
+                            renameTaskButton.addEventListener('click', () => {
+                            const taskId = renameTaskButton.getAttribute('data-task-id')
+                            const newTaskName = renameTaskInput.value
+
+                            if (taskId && newTaskName) {
+                                fetch(`http://localhost:5000/rename/${taskId}`, {
+                                    method: 'PUT',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        taskname: newTaskName
+                                    })
+                                })
+                                .then(response => {
+                                    if (response.status === 200) {
+                                        closeModal()
+                                        location.reload()
+                                    } else {
+                                        console.error('Błąd podczas zmiany nazwy zadania.')
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Błąd sieci:', error)
+                                });
+                            }
+                            });
+
+                            createDeleteButton.setAttribute('type', 'button')
+                            createDeleteButton.setAttribute('id', 'delete-button' + e.id_tasks)
+                            createDeleteButton.classList.add('edit-buttons')
+                            createDeleteButton.setAttribute('value', 'Delete task')
+                            createDeleteButton.setAttribute('data', e.id_tasks)
+
+                            function deleteTask(taskId) {
+                                fetch(`http://localhost:5000/delete-task/${taskId}`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'Content-Type': 'application/json'
+                                    }
+                                })
+                                .then(response => {
+                                    if (response.status === 200) {
+                                        location.reload()
+                                    } else {
+                                        console.error('Błąd podczas usuwania zadania.')
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Błąd sieci:', error)
+                                });
+                            }
+
+                            createDeleteButton.addEventListener('click', (e) => {
+                                const taskId = e.target.getAttribute('data')
+                                deleteTask(taskId)
+                            });
+
+                            createTaskElement.innerText = e.taskname
+                            taskContainer.append(createTaskElement)
+                            createTaskElement.append(createCheckbox)
+                            createTaskElement.append(createEditButton)
+                            createTaskElement.append(createDeleteButton)
+                        })
+                    })
+                </script>
+            </form>
+        </div>
+        <script>
+            const taskContainer = document.getElementById('task-container')
+            const newTaskName = document.getElementById('task-name-input')
+            const addTaskButton = document.getElementById('add-task-button')
+            const selectCategory = document.getElementById('select-category-input')
+            
+            const newCategoryName = document.getElementById('add-new-category-input')
+            const addCategoryButton = document.getElementById('add-new-category-button')
+
+            const removeCategorySelect = document.getElementById('remove-category-input')
+            const removeCategoryButton = document.getElementById('remove-category-button')
+
+            const baseUrl = 'http://localhost:5000' 
+
+            addTaskButton.addEventListener('click', postTask)
+            async function postTask() {
+               if (newTaskName.value == '') { return }
+               const res = await fetch(baseUrl + '/add-task',
+                   {
+                       method: 'POST',
+                       headers: {
+                           "Content-Type": 'application/json'
+                       },
+                       body: JSON.stringify({
+                           taskname: newTaskName.value,
+                           iscompleted: 0,
+                           id_categories: selectCategory.value,
+                           id_users: 1
+                       })
+                   }) 
+            }
+
+            addCategoryButton.addEventListener('click', postCategory)
+            async function postCategory() {
+               if (newCategoryName.value == '') { return }
+               const res = await fetch(baseUrl + '/add-category',
+                   {
+                       method: 'POST',
+                       headers: {
+                           "Content-Type": 'application/json'
+                       },
+                       body: JSON.stringify({
+                           categoryname: newCategoryName.value
+                       })
+                   })
+            }
+
+            removeCategoryButton.addEventListener('click', deleteCategory)
+            async function deleteCategory() {
+               const res = await fetch(baseUrl + '/delete-category',
+                   {
+                       method: 'DELETE',
+                       headers: {
+                           "Content-Type": 'application/json'
+                       },
+                       body: JSON.stringify({
+                           id_categories: removeCategorySelect.value
+                       })
+                   })
+            }
+        </script>
+    </div>
+</body>
+</html>
